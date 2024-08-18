@@ -1,0 +1,167 @@
+---
+title: "Life expectancy CCA"
+author: "s18840"
+date: "2024-05-27"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Loading Libraries that are needed
+```{r}
+library(dplyr)
+library(tidyr)
+library(Amelia)
+library(tidyverse)
+require(GGally)
+require(CCA)
+require(CCP)
+```
+
+
+#importing the data Set
+```{r}
+life_exp_data<-read_csv("../data/Life Expectancy Data.csv")
+```
+```{r}
+head(life_exp_data)
+```
+
+#Cleaning the dataset
+```{r}
+```
+```{r}
+life_exp_data <- life_exp_data %>% select_if(~ mean(is.na(.)) < 0.5)
+```
+```{r}
+```
+```{r}
+life_exp_data<-life_exp_data%>%drop_na()
+```
+
+```{r}
+missmap(life_exp_data, main = "Missing Values Map", col = c("yellow", "black"), legend = TRUE)
+```
+```{r}
+# Standardize numeric columns
+life_exp_data <- life_exp_data%>% mutate_if(is.numeric, scale)
+#head(life_exp_data)
+```
+```{r}
+colnames(life_exp_data)
+```
+
+
+Set X: Economic and Social Factors
+Set Y: Health-Related Factors
+
+```{r}
+# Select the variables for X and Y
+
+eco_social<- as.matrix(life_exp_data[, c("GDP", "Population", "percentage expenditure")])
+
+health<- as.matrix(life_exp_data[, c("Life expectancy", "Adult Mortality", "infant deaths")])
+
+
+```
+
+
+```{r}
+#Pairwise scatter plots.
+ggpairs(eco_social)
+ggpairs(health)
+
+```
+```{r}
+#Find the correlations within and between the two sets of variables.
+matcor(eco_social,health)
+```
+```{r}
+#Apply Canonical Correlation Analysis to the two groups.
+cc1 <- cc(eco_social,health)
+```
+
+
+```{r}
+#The canonical correlations.
+cc1$cor
+```
+
+```{r}
+#The squared canonical correlations
+(cc1$cor)^2
+
+```
+
+
+
+```{r}
+#Raw canonical coefficients for the eco_social variables.
+cc1[3]
+```
+
+```{r}
+#Row canonical coefficients for the health variables.
+cc1[4]
+```
+```{r}
+#Compute canonical loadings.
+cc2 <- comput(eco_social,health, cc1)
+
+#Correlations between each variable and the corresponding canonical variate.
+cc2[3:6]
+```
+```{r}
+library(CCP)
+```
+
+```{r}
+#Tests of canonical dimensions.
+
+rho <- cc1$cor
+
+```
+
+```{r}
+#Define number of observations, number of variables in first set, and number of variables in the second set.
+n <- dim(X)[1]
+p <- length(eco_social)
+q <- length(health)
+
+
+
+```
+
+```{r}
+n 
+p <-3
+q <-3
+```
+
+
+```{r}
+#Calculate p-values using the F-approximations of different test statistics:
+p.asym(rho, n, p, q, tstat = "Wilks")
+p.asym(rho, n, p, q, tstat = "Hotelling")
+p.asym(rho, n, p, q, tstat = "Pillai")
+p.asym(rho, n, p, q, tstat = "Roy")
+```
+
+```{r}
+#Standardized square feet sizes canonical coefficients diagonal matrix of sqftSizes standard deviations.
+
+s1 <- diag(sqrt(diag(cov(eco_social))))
+s1 %*% cc1$xcoef
+```
+
+
+
+```{r}
+#Standardized facilities canonical coefficients diagonal matrix of facilities standard deviations.
+
+s2 <- diag(sqrt(diag(cov(health))))
+s2 %*% cc1$ycoef
+```
+
